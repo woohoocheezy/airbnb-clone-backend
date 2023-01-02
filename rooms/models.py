@@ -52,7 +52,7 @@ class Room(CommonModel):
         on_delete=models.SET_NULL,
     )
 
-    def __str__(self) -> str:
+    def __str__(room) -> str:
         return room.name
 
     def total_amenitiea(room):
