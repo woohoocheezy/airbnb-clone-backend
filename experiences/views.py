@@ -36,7 +36,7 @@ class PerkDetail(APIView):
     def get_object(self, pk):
         try:
             return Perk.objects.get(pk=pk)
-        except:
+        except Perk.DoesNotExist:
             raise NotFound
 
     def get(self, request, pk):
