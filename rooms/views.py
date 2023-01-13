@@ -162,17 +162,75 @@ class RoomDetail(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk):
-        room = self.get_object()
+        room = self.get_object(pk)
 
         # check if the user is authenticated
         if not request.user.is_authenticated:
             raise NotAuthenticated
 
         # check if the user is same with owner of the room
-        if room.user != request.user:
+        if room.owner != request.user:
             raise PermissionDenied
 
         # update
+        serializer = RoomDetailSerializer(
+            room,
+            data=request.data,
+            partial=True,
+        )
+
+        # check if the information from the serializer is valid
+        if serializer.is_valid():
+            # check if the category is given from user request
+            category_pk = request.data.get("category")
+
+            # if user wants to update this room's category
+            # check if the category is valid
+            if category_pk:
+                try:
+                    category = Category.objects.get(pk=category_pk)
+
+                    # check if the category kind is room
+                    if category.kind == Category.CategoryKindChoices.EXPERIENCES:
+                        raise ParseError("The category kind should be 'rooms'")
+
+                # the case when the given category is not available from DB
+                except Category.DoesNotExist:
+                    raise ParseError("Category not found")
+
+            try:
+                with transaction.atomic():
+                    # if the category is given, create a updated room wtih the category
+                    if category_pk:
+                        updated_room = serializer.save(
+                            category=category,
+                        )
+                    # if the category is not given, create a updated room without the category
+                    else:
+                        updated_room = serializer.save()
+
+                    # get amenity 'pk's from user request
+                    amenities = request.data.get("amenities")
+
+                    # the case which user wants to update
+                    if amenities:
+                        # clear the existing amenities on the room
+                        updated_room.amenities.clear()
+
+                        # add new amenities to the room
+                        # if any amenity is not on DB, the ParseError is raised
+                        for amenity_pk in amenities:
+                            amenity = Amenity.objects.get(pk=amenity_pk)
+                            updated_room.amenities.add(amenity)
+
+                    return Response(RoomDetailSerializer(updated_room).data)
+
+            except Exception as e:
+                # the case Amenity with given pks is not found
+                raise ParseError("Amenity not found")
+
+        else:
+            return Response(serializer.errors)
 
     def delete(self, request, pk):
         room = self.get_object(pk)
