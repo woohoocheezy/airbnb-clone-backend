@@ -22,7 +22,7 @@ class RoomDetailSerializer(ModelSerializer):
 
     # models that have a relation with a room
     owner = UserSerializerForRoomDetail(read_only=True)
-    amenities = AmenitiySerializer(read_only=True, many=True)
+    # amenities = AmenitiySerializer(read_only=True, many=True)
     category = CategorySerializer(read_only=True)
 
     # average review field
