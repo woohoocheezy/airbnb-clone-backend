@@ -28,10 +28,6 @@ class RoomDetailSerializer(ModelSerializer):
     # average review field
     avg_rating = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
-    reviews = ReviewSerializer(
-        many=True,
-        read_only=True,
-    )
 
     class Meta:
         model = Room
