@@ -12,6 +12,7 @@ from .models import Amenity, Room
 from .serializers import AmenitiySerializer, RoomListSerializer, RoomDetailSerializer
 from reviews.serializers import ReviewSerializer
 from categories.models import Category
+from django.conf import settings
 
 
 class Amenities(APIView):
@@ -268,7 +269,7 @@ class RoomReviews(APIView):
         except ValueError:  # the case lie ?page='adasda'
             page = 1  # at this case set 'page' as '1' instead of sending error message
 
-        page_size = 3
+        page_size = settings.PAGE_SIZE
         start = (page - 1) * page_size
         end = start + page_size
         room = self.get_object(pk)
@@ -303,3 +304,8 @@ class RoomAmenities(APIView):
         )
 
         return Response(serializer.data)
+
+
+class RoomPhotos(APIView):
+    def post(self, request, pk):
+        pass
