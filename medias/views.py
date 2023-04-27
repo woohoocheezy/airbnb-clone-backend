@@ -1,3 +1,4 @@
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.status import HTTP_200_OK
 from rest_framework.response import Response
@@ -6,6 +7,8 @@ from .models import Photo
 
 
 class PhotoDetail(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get_object(self, pk):
         try:
             return Photo.objects.get(pk=pk)
@@ -21,13 +24,6 @@ class PhotoDetail(APIView):
         """
 
         photo = self.get_object(pk)
-
-        # if photo.room:
-        #     if photo.room.owner != request.user:  # using 2 relations via ORM
-        #         raise PermissionDenied
-        # elif photo.experience:
-        #     if photo.experience.host != request.user:
-        #         raise PermissionDenied
 
         if (photo.room and photo.room.owner != request.user) or (
             photo.experience and photo.experience.host != request.user

@@ -14,6 +14,7 @@ from reviews.serializers import ReviewSerializer
 from categories.models import Category
 from django.conf import settings
 from medias.serializers import PhotoSerializer
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 
 class Amenities(APIView):
@@ -87,6 +88,7 @@ class AmenityDetail(APIView):
 
 
 class Rooms(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     """
     Rooms API URL for "GET" and "POST" request
@@ -103,59 +105,59 @@ class Rooms(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        if request.user.is_authenticated:
-            serializer = RoomDetailSerializer(data=request.data)
+        serializer = RoomDetailSerializer(data=request.data)
 
-            if serializer.is_valid():
-                category_pk = request.data.get(
-                    "category"
-                )  # get catepory pk from request.data
+        if serializer.is_valid():
+            category_pk = request.data.get(
+                "category"
+            )  # get catepory pk from request.data
 
-                # category validation
-                if not category_pk:  # the category pk is not given from request.data
-                    raise ParseError("Category is required")
+            # category validation
+            if not category_pk:  # the category pk is not given from request.data
+                raise ParseError("Category is required")
 
-                try:  # the category pk is not valid from DB
-                    category = Category.objects.get(pk=category_pk)
+            try:  # the category pk is not valid from DB
+                category = Category.objects.get(pk=category_pk)
 
-                    # the category kind is not Room
-                    if category.kind == Category.CategoryKindChoices.EXPERIENCES:
-                        raise ParseError("The category kind should be 'rooms'")
+                # the category kind is not Room
+                if category.kind == Category.CategoryKindChoices.EXPERIENCES:
+                    raise ParseError("The category kind should be 'rooms'")
 
-                except Category.DoesNotExist:
-                    raise ParseError("Category not found")
+            except Category.DoesNotExist:
+                raise ParseError("Category not found")
 
-                # apply django db transaction for amenities
-                try:
-                    with transaction.atomic():
-                        room = serializer.save(
-                            owner=request.user,
-                            category=category,
-                        )
+            # apply django db transaction for amenities
+            try:
+                with transaction.atomic():
+                    room = serializer.save(
+                        owner=request.user,
+                        category=category,
+                    )
 
-                        # get amenity 'pk's from user request
-                        amenities = request.data.get("amenities")
+                    # get amenity 'pk's from user request
+                    amenities = request.data.get("amenities")
 
-                        # add a amenity to room
-                        for amenity_pk in amenities:
-                            amenity = Amenity.objects.get(pk=amenity_pk)
-                            room.amenities.add(amenity)
+                    # add a amenity to room
+                    for amenity_pk in amenities:
+                        amenity = Amenity.objects.get(pk=amenity_pk)
+                        room.amenities.add(amenity)
 
-                        return Response(RoomDetailSerializer(room).data)
-                except Exception:
-                    raise ParseError("Amenity not found")
+                    return Response(RoomDetailSerializer(room).data)
+            except Exception:
+                raise ParseError("Amenity not found")
 
-            else:
-                return Response(serializer.errors)
         else:
-            raise NotAuthenticated
+            return Response(serializer.errors)
 
 
 class RoomDetail(APIView):
+
     """
     Room API URL for "GET", "PUT" and "DELETE"  request
     example : /api/v1/rooms/1
     """
+
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_object(self, pk):
         try:
@@ -173,10 +175,6 @@ class RoomDetail(APIView):
 
     def put(self, request, pk):
         room = self.get_object(pk)
-
-        # check if the user is authenticated
-        if not request.user.is_authenticated:
-            raise NotAuthenticated
 
         # check if the user is same with owner of the room
         if room.owner != request.user:
@@ -245,10 +243,6 @@ class RoomDetail(APIView):
     def delete(self, request, pk):
         room = self.get_object(pk)
 
-        # check if the user is authenticated
-        if not request.user.is_authenticated:
-            raise NotAuthenticated
-
         # check if the user is same with the owner of this room
         if room.owner != request.user:
             raise PermissionDenied
@@ -308,6 +302,8 @@ class RoomAmenities(APIView):
 
 
 class RoomPhotos(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
     def get_object(self, pk):
         """sumary_line Getting a 'Room' object
 
@@ -323,9 +319,6 @@ class RoomPhotos(APIView):
 
     def post(self, request, pk):
         room = self.get_object(pk)
-
-        if not request.user.is_authenticated:
-            raise NotAuthenticated
 
         if request.user != room.owner:
             raise PermissionDenied
