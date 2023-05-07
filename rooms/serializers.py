@@ -4,6 +4,7 @@ from .models import Amenity, Room
 from users.serializers import UserSerializerForRoomDetail
 from reviews.serializers import ReviewSerializer
 from categories.serializers import CategorySerializer
+from medias.serializers import PhotoSerializer
 
 
 class AmenitiySerializer(ModelSerializer):
@@ -29,6 +30,8 @@ class RoomDetailSerializer(ModelSerializer):
     avg_rating = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
 
+    photos = PhotoSerializer(many=True, read_only=True)
+
     class Meta:
         model = Room
         fields = "__all__"
@@ -53,6 +56,8 @@ class RoomListSerializer(ModelSerializer):
     avg_rating = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
 
+    photos = PhotoSerializer(many=True, read_only=True)
+
     class Meta:
         model = Room
         fields = (
@@ -63,11 +68,8 @@ class RoomListSerializer(ModelSerializer):
             "price",
             "avg_rating",
             "is_owner",
+            "photos",
         )
-        my = [
-            "as",
-            "Asd",
-        ]
 
     # calculating avg ratings
     def get_avg_rating(self, room):
