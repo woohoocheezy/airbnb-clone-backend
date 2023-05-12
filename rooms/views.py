@@ -5,7 +5,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import (
     NotFound,
-    NotAuthenticated,
     ParseError,
     PermissionDenied,
 )
@@ -17,7 +16,7 @@ from reviews.serializers import ReviewSerializer
 from medias.serializers import PhotoSerializer
 from categories.models import Category
 from bookings.models import Booking
-from bookings.serializers import PublicBookingSerializer
+from bookings.serializers import PublicBookingSerializer, CreateRoomBookingSerializer
 
 
 class Amenities(APIView):
@@ -389,3 +388,21 @@ class RoomBookings(APIView):
         serializer = PublicBookingSerializer(bookings, many=True)
 
         return Response(serializer.data)
+
+    def post(self, request, pk):
+        """POST request handler
+        ex) POST /rooms/1/bookings
+
+        Keyword arguments:
+        request -- get request from user
+        pk -- the pk of the room requested for checking bookings
+        Return: the booking data of the room with pk
+        """
+
+        room = self.get_object(pk)
+        serializer = CreateRoomBookingSerializer(data=request.data)
+
+        if serializer.is_valid():
+            return Response({'ok':True})
+        else:
+            return Response(serializer.errors)
