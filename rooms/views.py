@@ -1,3 +1,6 @@
+from django.db import transaction
+from django.conf import settings
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import (
@@ -7,14 +10,14 @@ from rest_framework.exceptions import (
     PermissionDenied,
 )
 from rest_framework.status import HTTP_204_NO_CONTENT
-from django.db import transaction
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from .models import Amenity, Room
 from .serializers import AmenitiySerializer, RoomListSerializer, RoomDetailSerializer
 from reviews.serializers import ReviewSerializer
-from categories.models import Category
-from django.conf import settings
 from medias.serializers import PhotoSerializer
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from categories.models import Category
+from bookings.models import Booking
+from bookings.serializers import PublicBookingSerializer
 
 
 class Amenities(APIView):
@@ -271,7 +274,7 @@ class RoomReviews(APIView):
         end = start + page_size
         room = self.get_object(pk)
         serializer = ReviewSerializer(
-            room.reviews.all()[start:end],  
+            room.reviews.all()[start:end],
             many=True,
         )
 
@@ -343,3 +346,46 @@ class RoomPhotos(APIView):
             return Response(serializer.data)
         else:
             return Response(serializer.errors)
+
+
+class RoomBookings(APIView):
+
+    """APIView for RoomBooking"""
+
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self, pk):
+        """get a room object with the pk
+
+        Keyword arguments:
+        pk -- the pk of the room to find
+        Return: the room object with the pk
+        """
+
+        try:
+            return Room.objects.get(pk=pk)
+        except:
+            return NotFound
+
+    def get(self, request, pk):
+        """GET request handler
+        ex) GET /rooms/1/bookings
+
+        Keyword arguments:
+        request -- get request from user
+        pk -- the pk of the room requested for checking bookings
+        Return: the booking data of the room with pk
+        """
+
+        room = self.get_object(pk)
+        now = timezone.localtime(timezone.now()).date()
+
+        bookings = Booking.objects.filter(
+            room=room,
+            kind=Booking.BookingKindChoices.ROOM,
+            check_in__gt=now,
+        )
+
+        serializer = PublicBookingSerializer(bookings, many=True)
+
+        return Response(serializer.data)
