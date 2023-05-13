@@ -396,13 +396,20 @@ class RoomBookings(APIView):
         Keyword arguments:
         request -- get request from user
         pk -- the pk of the room requested for checking bookings
-        Return: the booking data of the room with pk
+        Return: the created 'booking data' of the room with pk
         """
 
         room = self.get_object(pk)
         serializer = CreateRoomBookingSerializer(data=request.data)
 
         if serializer.is_valid():
-            return Response({'ok':True})
+            booking = serializer.save(
+                room=room,
+                user=request.user,
+                kind=Booking.BookingKindChoices.ROOM,
+            )
+            serializer = PublicBookingSerializer(booking)
+            return Response(serializer.data)
+
         else:
             return Response(serializer.errors)
