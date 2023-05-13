@@ -46,7 +46,7 @@ class User(AbstractUser):
         editable=False,
     )
 
-    avatar = models.ImageField(
+    avatar = models.URLField(
         blank=True,
     )
 
