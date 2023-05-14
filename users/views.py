@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ParseError
 from .serializers import PrivateUserSerializer
 
 
@@ -47,4 +48,33 @@ class Me(APIView):
             return Response(serializer.errors)
 
 
-# class User(APIView):
+class Users(APIView):
+
+    """APIView for 'POST  /users' request handler"""
+
+    def post(self, request):
+        """POST /users' handler to create a user
+
+        Keyword arguments:
+        request -- the request from user
+        Return: the created user
+        """
+
+        # password validation
+        password = request.data.get("password")
+        if not password:
+            raise ParseError
+
+        serializer = PrivateUserSerializer(data=request.data)
+
+        if serializer.is_valid():
+            user = serializer.save()
+            user.set_password(password)
+            user.save()
+
+            serializer = PrivateUserSerializer(user)
+
+            return Response(serializer.data)
+
+        else:
+            return Response(serializer.errors)
