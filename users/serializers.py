@@ -28,3 +28,23 @@ class PrivateUserSerializer(ModelSerializer):
             "groups",
             "user_permissions",
         )
+
+
+class PublicUserSerializer(ModelSerializer):
+    """for a Public user profile"""
+
+    class Meta:
+        model = User
+        fields = (
+            "gender",
+            "language",
+            "currency",
+            "total_reviews",
+            "total_rooms",
+        )
+
+    def get_total_reviews(self, user):
+        return user.total_reviews()
+
+    def get_total_rooms(self, user):
+        return user.total_rooms()

@@ -1,9 +1,17 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
+from rest_framework import status, generics
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ParseError
-from .serializers import PrivateUserSerializer
+from rest_framework.exceptions import ParseError, NotFound
+from reviews.models import Review
+from reviews.paginations import ReviewPagination
+from reviews.serializers import ReviewSerializer
+from rooms.models import Room
+from rooms.paginations import HostRoomPagination
+from rooms.serializers import HostRoomSerializer
+from .serializers import PrivateUserSerializer, PublicUserSerializer
+from .models import User
 
 
 class Me(APIView):
@@ -78,3 +86,84 @@ class Users(APIView):
 
         else:
             return Response(serializer.errors)
+
+
+class PublicUser(APIView):
+    """APIView for 'GET /users/@<username>' request handler"""
+
+    def get(self, request, username):
+        """GET /users/@<username>' handler to display a user
+
+        Keyword arguments:
+        request -- the request from user
+        username -- the username to display
+        Return: the user with username
+        """
+        try:
+            user = User.objects.get(username=username)
+        except:
+            raise NotFound
+        serializer = PublicUserSerializer(user)
+        return Response(serializer.data)
+
+
+class UserReviews(generics.ListAPIView):
+    serializer_class = ReviewSerializer
+    pagination_class = ReviewPagination
+
+    def get_queryset(self):
+        username = self.kwargs.get("username")
+        if User.objects.filter(username=username).exists():
+            queryset = (
+                Review.objects.filter(user__username=username)
+                .all()
+                .order_by("-created_at")
+            )
+            return queryset
+        else:
+            raise ParseError(f"No user with that nickname({username}) exists.")
+
+
+class HostRooms(generics.ListAPIView):
+    serializer_class = HostRoomSerializer
+    pagination_class = HostRoomPagination
+
+    def get_queryset(self):
+        username = self.kwargs.get("username")
+        if User.objects.filter(username=username).exists():
+            queryset = Room.objects.filter(owner__username=username).order_by(
+                "-created_at"
+            )
+            return queryset
+        else:
+            raise ParseError(f"No user with that nickname({username}) exists.")
+
+
+class ChangePassword(APIView):
+    """APIView for 'PUT /users/change-password' request handler"""
+
+    permission_classes = [IsAuthenticated]
+
+    def put(self, reqeust):
+        """PUT reaquest handler for changing user's password
+
+        Keyword arguments:
+        request -- the request from user
+        Return: status code('HTTP_200_OK' for if case & HTTP_400_BAD_REQUEST' for else case)
+        """
+
+        user = reqeust.user
+        old_password = reqeust.data.get("old_password")
+        new_password = reqeust.data.get("new_password")
+
+        if not old_password or not new_password:
+            raise ParseError
+
+        if user.check_password(old_password):
+            user.set_password(new_password)
+            user.save()
+
+            return Response(status=status.HTTP_200_OK)
+
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
